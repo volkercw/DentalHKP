@@ -1352,7 +1352,8 @@ if st.session_state.agent_result:
                         goz_prices=_prices if _prices else None,
                     )
                     ordner = save_projekt(projekt)
-                    word_path = ordner / f"HKP_KV{kv['solid']}_Analyse.docx"
+                    _kv_id = (kv or {}).get("solid") or st.session_state.selected_kv_solid or "unbekannt"
+                    word_path = ordner / f"HKP_KV{_kv_id}_Analyse.docx"
                     generate_word(projekt, word_path)
                     st.session_state.saved_ordner = str(ordner)
                     st.session_state.saved_projekt = projekt
@@ -1375,7 +1376,8 @@ if st.session_state.agent_result:
                 with st.spinner("Erstelle Angebot..."):
                     try:
                         from projekt_manager import generate_angebot_word
-                        angebot_path = Path(st.session_state.saved_ordner) / f"HKP_KV{kv['solid']}_Angebot.docx"
+                        _kv_id = (kv or {}).get("solid") or st.session_state.selected_kv_solid or "unbekannt"
+                        angebot_path = Path(st.session_state.saved_ordner) / f"HKP_KV{_kv_id}_Angebot.docx"
                         generate_angebot_word(
                             kv_details=kv,
                             patient_info=st.session_state.selected_patient or {},
