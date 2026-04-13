@@ -618,12 +618,11 @@ def generate_angebot_word(
         t = doc.add_table(rows=1, cols=3)
         t.style = 'Table Grid'
         c = t.rows[0].cells
-        c[0].text = f"Name: {patient_name}"
-        c[1].text = anlage
-        c[2].text = titel
-        for cell in c:
-            cell.paragraphs[0].runs[0].font.size = Pt(9)
-            cell.paragraphs[0].runs[0].bold = True
+        # add_run() statt cell.text = ... um sicherzustellen dass immer ein Run existiert
+        for cell, text in zip(c, [f"Name: {patient_name}", anlage or "", titel or ""]):
+            run = cell.paragraphs[0].add_run(text)
+            run.font.size = Pt(9)
+            run.bold = True
         return t
 
     def fdi_from_pos(pos: dict) -> str:

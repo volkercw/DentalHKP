@@ -24,8 +24,8 @@ env/
 projekte/
 DentalProjekte/
 
-# Stücklisten-Katalog (wird lokal generiert)
-katalog.json
+# Stücklisten-Katalog (wird lokal generiert, enthält Praxis-spezifische Daten)
+katalog_stuecklisten.json
 
 # Praxis-spezifische Dateien
 *.dotx
