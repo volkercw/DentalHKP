@@ -1,0 +1,46 @@
+# Sensible Daten – NIEMALS committen
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtuelle Umgebungen
+venv/
+.venv/
+env/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Projekte / Patientendaten (lokal, nicht im Repo)
+projekte/
+DentalProjekte/
+
+# Stücklisten-Katalog (wird lokal generiert)
+katalog.json
+
+# Praxis-spezifische Dateien
+*.dotx
+*.docx
+
+# Analyse-Skripte (lokal / dev only)
+investigate_*.py
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

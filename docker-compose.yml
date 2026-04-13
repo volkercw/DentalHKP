@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    container_name: dental-hkp-app
+    ports:
+      - "8502:8501"          # Port 8502 → damit kein Konflikt mit DentalAI (8501)
+    env_file:
+      - .env
+    environment:
+      - PROJEKTE_PFAD=/app/projekte
+    volumes:
+      # Live-Reload: Code-Änderungen sofort sichtbar (kein rebuild nötig)
+      - .:/app
+      # Persistente Projekte → direkt in D:\DentalProjekte
+      - D:\DentalProjekte:/app/projekte
+    restart: unless-stopped
