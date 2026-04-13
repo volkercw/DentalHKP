@@ -639,11 +639,12 @@ def generate_angebot_word(
         return ""
 
     # ── Patientendaten ────────────────────────────────────────────────────────
+    _kv         = kv_details or {}          # sicher gegen None
     pat_name    = f"{patient_info.get('name','')}, {patient_info.get('vorname','')}"
     pat_kurz    = f"{patient_info.get('name','')} {patient_info.get('vorname','')}"
-    kv_id       = kv_details.get("solid", "?")
-    kv_datum    = kv_details.get("datum", "")
-    kv_text     = kv_details.get("kurztext", "")
+    kv_id       = _kv.get("solid", "?")
+    kv_datum    = _kv.get("datum", "")
+    kv_text     = _kv.get("kurztext", "")
     today       = datetime.date.today().strftime("%d.%m.%Y")
 
     # Kosten: aus KI-Analyse (preferred) oder Charly-kv_details (fallback)
@@ -655,9 +656,9 @@ def generate_angebot_word(
         gesamt    = kva["gesamt"]
         _use_kva  = True
     else:
-        honorar     = float(kv_details.get("honorar") or 0)
-        material    = float(kv_details.get("material") or 0)
-        labor_total = float(kv_details.get("labor") or 0)
+        honorar     = float(_kv.get("honorar") or 0)
+        material    = float(_kv.get("material") or 0)
+        labor_total = float(_kv.get("labor") or 0)
         gesamt      = honorar + material + labor_total
         kva         = None
         _use_kva    = False

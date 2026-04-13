@@ -463,8 +463,30 @@ def build_katalog(
             # 2. Je Variante separat analysieren
             varianten_out: dict = {}
             for var_name, vd in varianten.items():
-                trigger = vd["trigger_goz"][0]
-                raw_var, n_var = _fetch_raw_patterns_inlay_variante(var_name, trigger)
+                # Alle trigger_goz abfragen und Ergebnisse zusammenführen
+                # (z.B. "3-flächig+" sucht nach 2200 UND 2170)
+                trigger_results: list[tuple[list[dict], int]] = [
+                    _fetch_raw_patterns_inlay_variante(var_name, t)
+                    for t in vd["trigger_goz"]
+                ]
+                # Deduplizieren: gleiche goz_nr zusammenführen (gewichteter avg_faktor)
+                merged: dict[str, dict] = {}
+                for raw_chunk, _ in trigger_results:
+                    for row in raw_chunk:
+                        nr = row["goz_nr"]
+                        if nr not in merged:
+                            merged[nr] = dict(row)
+                        else:
+                            ex = merged[nr]
+                            tot = ex["kvs_mit_position"] + row["kvs_mit_position"]
+                            ex["avg_faktor"] = round(
+                                (ex["avg_faktor"] * ex["kvs_mit_position"]
+                                 + row["avg_faktor"] * row["kvs_mit_position"]) / tot, 2
+                            ) if tot else ex["avg_faktor"]
+                            ex["kvs_mit_position"] = tot
+                raw_var = list(merged.values())
+                # n_var = größter Einzel-Trigger-Wert (repräsentativer Hauptpfad)
+                n_var = max((n for _, n in trigger_results), default=0)
 
                 if n_var > 10:   # Nur wenn genug Daten
                     annotiert = _run_chefarzt_agent(
