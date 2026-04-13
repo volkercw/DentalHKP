@@ -82,7 +82,9 @@ BEHANDLUNGEN_CONFIG: dict[str, dict] = {
         "varianten": {
             "1-flächig":   {"haupt_goz": "2180", "trigger_goz": ["2180"]},
             "2-flächig":   {"haupt_goz": "2190", "trigger_goz": ["2190"]},
-            "3-flächig+":  {"haupt_goz": "2200", "trigger_goz": ["2200"]},
+            # 2200 = Standard GOZ 2012 (dreiflächig+); 2170 = praxisspezifischer Alias
+            # "mehr als zweiflächig" (häufig in älteren Charly-KVs als "2170zwei")
+            "3-flächig+":  {"haupt_goz": "2200", "trigger_goz": ["2200", "2170"]},
         },
         "haupt_goz":      "2190",   # Default-Variante
     },

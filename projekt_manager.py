@@ -5,6 +5,7 @@ DentalHKP – Projekt-Management
 - Projekt-Liste
 """
 import json
+import re
 import datetime
 from pathlib import Path
 from decimal import Decimal
@@ -14,6 +15,24 @@ from config import PROJEKTE_PFAD
 # ─────────────────────────────────────────────────────────────────────────────
 # Hilfsfunktionen
 # ─────────────────────────────────────────────────────────────────────────────
+
+def _goz_display(goz_nr: str) -> str:
+    """Entfernt Charly-interne Material-Suffixe für offizielle Ausgabe.
+
+    Charly hängt Material-Kürzel an GOZ-Nummern:
+      k = Keramik  →  2170k → 2170
+      v = Verblendet → 2210v → 2210
+      z = Zirkon    → 2120z → 2120
+      a = Akryl/Analog → 5190a → 5190
+
+    Behalten wird 'i' (§6-Analog Implantat: 2200i bleibt 2200i,
+    da es intern als eigener Preisschlüssel geführt wird).
+    Sonderzeichen wie 'Ä1' (Ärztliche Beratung) bleiben unverändert.
+    """
+    if not goz_nr:
+        return goz_nr
+    return re.sub(r'^(\d+)[kvza]$', r'\1', goz_nr)
+
 
 def _safe(obj):
     """Decimal/None-safe Konvertierung für JSON."""
@@ -420,7 +439,7 @@ def generate_word(projekt: dict, output_path: Path):
 
             row = tbl.add_row()
             vals = [
-                pos.get("goz_nr", ""),
+                _goz_display(pos.get("goz_nr", "")),
                 (pos.get("text") or pos.get("bezeichnung") or "")[:60],
                 str(pos.get("faktor", "")),
                 str(pos.get("anzahl", "")),
@@ -756,7 +775,7 @@ def generate_angebot_word(
                 vals = [
                     pos["zahn_str"],
                     str(pos.get("anzahl", 1)),
-                    pos.get("goz_nr", ""),
+                    _goz_display(pos.get("goz_nr", "")),
                     leistung[:80],
                     f"{pos.get('faktor', 2.3):.1f}",
                     f"{hon:.2f}",
@@ -785,7 +804,7 @@ def generate_angebot_word(
                     vals = [
                         str(zahn_nr),
                         str(pos.get("anzahl", 1)),
-                        pos.get("goz_nr", ""),
+                        _goz_display(pos.get("goz_nr", "")),
                         leistung[:80],
                         f"{pos.get('faktor', 2.3):.1f}",
                         f"{hon:.2f}",
@@ -819,7 +838,7 @@ def generate_angebot_word(
             vals = [
                 fdi_from_pos(pos),
                 str(int(float(pos.get("anzahl") or 1))),
-                pos.get("goz_nr", ""),
+                _goz_display(pos.get("goz_nr", "")),
                 (pos.get("goz_text") or "")[:80],
                 str(pos.get("faktor", "")),
                 f"{betrag:.2f}",
