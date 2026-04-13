@@ -32,23 +32,48 @@ def _convert_decimals(obj):
 
 
 def _extract_json_block(text: str) -> dict | None:
-    """Extrahiert JSON aus einem Text (zwischen ```json...``` oder direkt)."""
-    # Versuche JSON-Block zu extrahieren
-    match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
-    if match:
+    """Extrahiert JSON aus einem Text – robust gegen Trunkierung durch max_tokens."""
+    import re as _re
+
+    def _try_parse(s: str) -> dict | None:
+        # 1) trailing commas entfernen  ,}  oder  ,]
+        s = _re.sub(r',\s*([}\]])', r'\1', s)
         try:
-            return json.loads(match.group(1))
+            return json.loads(s)
         except Exception:
             pass
-    # Versuche direkt als JSON
-    try:
-        # Finde erstes { bis letztes }
-        start = text.find('{')
-        end = text.rfind('}')
-        if start >= 0 and end > start:
-            return json.loads(text[start:end+1])
-    except Exception:
-        pass
+        return None
+
+    # Versuch 1: ```json...``` Block
+    match = _re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, _re.DOTALL)
+    if match:
+        r = _try_parse(match.group(1))
+        if r is not None:
+            return r
+
+    # Versuch 2: Erstes { bis letztes }
+    start = text.find('{')
+    end   = text.rfind('}')
+    if start >= 0 and end > start:
+        r = _try_parse(text[start:end+1])
+        if r is not None:
+            return r
+
+    # Versuch 3: Trunkiertes JSON reparieren
+    # Finde letztes vollständiges ] in "positionen" und schließe den Wrapper
+    if start >= 0:
+        fragment = text[start:]
+        last_bracket = fragment.rfind(']')
+        if last_bracket >= 0:
+            candidate = fragment[:last_bracket+1]
+            # Offene String am Ende abschneiden (häufig: "begruendung": "Te)
+            candidate = _re.sub(r',?\s*"[^"]*$', '', candidate)
+            candidate = _re.sub(r',\s*([}\]])', r'\1', candidate)
+            candidate += "]}"  # positionen-Array + Objekt schließen
+            r = _try_parse(candidate)
+            if r is not None:
+                return r
+
     return None
 
 
@@ -358,7 +383,7 @@ Antworte NUR mit diesem JSON (kein Wrapper, kein "zaehne"-Array):
 
     response = client.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=2048,
+        max_tokens=4096,
         system=system,
         messages=[{"role": "user", "content": user_msg}],
     )
@@ -368,8 +393,13 @@ Antworte NUR mit diesem JSON (kein Wrapper, kein "zaehne"-Array):
         if hasattr(block, "text"):
             raw_text = block.text
 
+    # stop_reason prüfen – bei max_tokens wird JSON trunkiert
+    stop_reason = getattr(response, "stop_reason", "end_turn")
+
     parsed = _extract_json_block(raw_text)
     if parsed and "positionen" in parsed:
+        if stop_reason == "max_tokens":
+            parsed["_truncated"] = True   # für Debugging sichtbar
         return parsed
 
     # Fallback
@@ -378,7 +408,7 @@ Antworte NUR mit diesem JSON (kein Wrapper, kein "zaehne"-Array):
         "behandlung": behandlung,
         "positionen": [],
         "_parse_error": True,
-        "_raw": raw_text[:300],
+        "_raw": raw_text[:500],
     }
 
 
@@ -498,7 +528,7 @@ Formatiere die Ausgabe:
 
     response = client.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=2048,
+        max_tokens=4096,
         system=system,
         messages=[{"role": "user", "content": user_msg}],
     )
