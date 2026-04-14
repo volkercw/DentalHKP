@@ -10,7 +10,7 @@ import json
 import re
 import anthropic
 from decimal import Decimal
-from config import CLAUDE_MODEL, ANTHROPIC_API_KEY, GOZ_SESSION_EINMALIG, USE_KATALOG
+from config import CLAUDE_MODEL, ANTHROPIC_API_KEY, GOZ_SESSION_EINMALIG, USE_KATALOG, goz_ref_section
 import db as db_module
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -240,10 +240,48 @@ def _goz_agent_single_tooth(
     has_goz    = tooth.get("has_goz", False)
     is_implant = tooth.get("is_implant", False)
 
+    # Behandlungskategorie bestimmen
+    _katalog_key = tooth.get("katalog_key", "")
+    _is_chirurgie    = _katalog_key in (
+        "Extraktion_einwurzelig", "Extraktion_mehrwurzelig", "Extraktion_chirurgisch",
+        "Implantat_Insertion", "Implantat_Augmentation", "Implantat_Freilegung",
+        "WSR", "Lappenoperation",
+    )
+    _is_extraktion   = "Extraktion" in _katalog_key
+    _is_impl_insert  = "Implantat_Insertion" == _katalog_key or "Implantat_Aug" in _katalog_key
+
     if vollstaendigkeit_modus or has_goz:
         aufgabe = (
             f"Prüfe ob für Zahn {zahn_nr} ({behandlung}) alle typischen GOZ-Positionen vorhanden sind. "
             "Schlage fehlende Ergänzungen vor. Vorhandene Positionen: farbe=null, fehlende Pflicht-Positionen: farbe=gruen."
+        )
+    elif _is_extraktion:
+        _goz_basis = tooth.get("goz_basis", "3000")
+        aufgabe = (
+            f"Erstelle GOZ-Stückliste für Zahn {zahn_nr} – EXTRAKTION ({behandlung}). "
+            f"Hauptleistung: {_goz_basis} ({'einwurzelig' if _goz_basis=='3000' else 'mehrwurzelig' if _goz_basis=='3010' else 'chirurgisch'}). "
+            "Typische Begleitpositionen: 0010/0040 (Beratung/Befund), 3210 (Wundnaht), "
+            "3270 (Nahtentfernung), 3050 (Alveoloplastik wenn nötig), "
+            "0070 (Präventionsberatung ggf.), Anästhesieprotokoll."
+        )
+    elif _is_impl_insert:
+        _goz_basis = tooth.get("goz_basis", "9000")
+        _is_aug = "Augmentation" in _katalog_key or "9010" in _goz_basis
+        aufgabe = (
+            f"Erstelle GOZ-Stückliste für Zahn {zahn_nr} – IMPLANTAT-INSERTION ({behandlung}). "
+            f"Hauptleistung: {_goz_basis} ({'mit Augmentation/BOD' if _is_aug else 'Standardlager'}). "
+            "{'+ 9020 (Knochenersatzmaterial) PFLICHT bei Augmentation. ' if _is_aug else ''}"
+            "Typische Positionen: 9000/9010 (Insertion), 9020 (Augmentation ggf.), "
+            "3210 (Wundnaht), 3270 (Nahtentfernung), 0040 (Befundaufnahme), "
+            "8000-8080 (MKO), 9030 (Freilegung zweizeitig ggf.). "
+            "WICHTIG: Kein 9050 hier (das ist beim prothetischen Abutment-Einsetzen)."
+        )
+    elif _is_chirurgie:
+        _goz_basis = tooth.get("goz_basis", "3130")
+        aufgabe = (
+            f"Erstelle GOZ-Stückliste für Zahn {zahn_nr} – CHIRURGIE ({behandlung}). "
+            f"Hauptleistung: {_goz_basis}. "
+            "Beachte typische Begleitpositionen: Anästhesie, Naht, Nachsorge."
         )
     elif is_implant:
         aufgabe = (
@@ -283,7 +321,29 @@ def _goz_agent_single_tooth(
     _goz_basis_tooth = tooth.get("goz_basis", "2190" if _is_inlay else "2210")
 
     implant_hinweis = ""
-    if is_implant:
+    if _is_extraktion:
+        implant_hinweis = f"""
+## EXTRAKTION – GOZ-Positionen
+- {tooth.get('goz_basis','3000')} = Extraktion HAUPTLEISTUNG → farbe: gruen
+  (3000=einwurzelig, 3010=mehrwurzelig, 3040=operative Entfernung)
+- 3210 = Wundnaht (wenn genäht wird) → farbe: gelb
+- 3270 = Nahtentfernung → farbe: gelb
+- 3050 = Alveoloplastik (wenn erforderlich) → farbe: gelb
+- 0040 = Befundaufnahme (einmalig/Sitzung) → farbe: gelb"""
+    elif _is_impl_insert:
+        _is_aug = "Augmentation" in _katalog_key
+        implant_hinweis = f"""
+## IMPLANTAT-INSERTION – GOZ-Positionen
+- {tooth.get('goz_basis','9000')} = Implantat-Insertion HAUPTLEISTUNG → farbe: gruen
+  (9000=Standardlager, 9010=augmentiertes Lager)
+{'- 9020 = Knochenersatzmaterial/Augmentation → farbe: gruen' if _is_aug else '- 9020 = Augmentation (falls erforderlich) → farbe: gelb'}
+- 3210 = Wundnaht → farbe: gelb
+- 3270 = Nahtentfernung → farbe: gelb
+- 0040 = Befundaufnahme → farbe: gelb
+- 8000-8080 = MKO-Paket → farbe: gruen
+- 9030 = Freilegung (nur bei zweizeitig) → farbe: gelb
+NICHT verwenden: 9050 (das ist beim Abutment-Einsetzen bei der Prothetik)"""
+    elif is_implant:
         implant_hinweis = """
 ## IMPLANTAT-KRONE – besondere GOZ-Positionen
 - 2200i = §6 Analog Implantatkrone (HAUPTLEISTUNG statt 2210) → farbe: gruen
@@ -304,10 +364,24 @@ def _goz_agent_single_tooth(
 - 2120z = Provisorisches Inlay/Aufbau → farbe: gelb
 - MKO-Paket 8000-8080 → farbe: gruen"""
 
+    # GOZ-Referenz je nach Behandlungstyp zusammenstellen
+    if _is_chirurgie or _is_extraktion or _is_impl_insert:
+        _goz_kategorien = ["allgemein", "chirurgie", "implantologie", "mko"]
+    elif is_implant:
+        _goz_kategorien = ["allgemein", "krone", "prothetik", "implantologie", "analog", "mko"]
+    elif _is_inlay:
+        _goz_kategorien = ["allgemein", "konservierend", "inlay", "prothetik", "mko"]
+    else:
+        _goz_kategorien = ["allgemein", "konservierend", "krone", "prothetik", "analog", "mko"]
+
+    _goz_ref_block = goz_ref_section(_goz_kategorien)
+
     system = (
         "Du bist ein spezialisierter GOZ-Abrechnungsexperte für Zahnärzte in Deutschland. "
-        "Du kennst die GOZ 2012 sowie §6-Analog-Positionen und praxisspezifische Besonderheiten. "
-        "Antworte AUSSCHLIESSLICH mit validem JSON, ohne Text davor oder danach."
+        "Du kennst die GOZ 2012 vollständig – prothetische, chirurgische und implantologische Positionen. "
+        "Verwende ausschließlich die unten aufgeführten GOZ-Positionen. "
+        "Antworte AUSSCHLIESSLICH mit validem JSON, ohne Text davor oder danach.\n\n"
+        + _goz_ref_block
     )
 
     _default_goz_nr = "2200i" if is_implant else (_goz_basis_tooth if _is_inlay else "2210")

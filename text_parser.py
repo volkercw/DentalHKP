@@ -15,8 +15,11 @@ Konfidenz-Stufen:
 import json
 import re
 import anthropic
-from config import CLAUDE_MODEL, ANTHROPIC_API_KEY
-from katalog_builder import find_katalog_key, get_inlay_variante, BEHANDLUNGEN_CONFIG
+from config import CLAUDE_MODEL, ANTHROPIC_API_KEY, GOZ_REFERENZ
+from katalog_builder import (
+    find_katalog_key, get_inlay_variante,
+    BEHANDLUNGEN_CONFIG, CHIRURGIE_CONFIG, ALL_KATALOG_KEYS,
+)
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -32,11 +35,15 @@ VALID_FDI = frozenset([
     41,42,43,44,45,46,47,48,
 ])
 
-# Behandlungstyp → kanonischer Name + GOZ-Basis
+# Behandlungstyp → kanonischer Name + GOZ-Basis (prothetisch + chirurgisch)
 BEHANDLUNG_LOOKUP: dict[str, dict] = {
-    k: {"name": v["bezeichnung"], "goz_basis": v["haupt_goz"],
-        "implant": v["implant"]}
-    for k, v in BEHANDLUNGEN_CONFIG.items()
+    k: {
+        "name":      v["bezeichnung"],
+        "goz_basis": v.get("haupt_goz") or v.get("goz_basis", ""),
+        "implant":   v.get("implant", False),
+        "kategorie": v.get("kategorie", "prothetik"),
+    }
+    for k, v in ALL_KATALOG_KEYS.items()
 }
 
 
@@ -53,44 +60,63 @@ def parse_treatment_text(
     Gibt Liste zurück, auch bei Fehlern (dann confidence="unclear").
     """
     system = (
-        "Du bist Assistent in einer Zahnarztpraxis und hilfst beim Parsen von "
-        "Behandlungsnotizen. Extrahiere Zähne und geplante Behandlungen. "
-        "Antworte AUSSCHLIESSLICH mit validem JSON-Array."
+        "Du bist GOZ-Abrechnungsexperte in einer Zahnarztpraxis. "
+        "Du kennst alle GOZ-2012-Positionen auswendig – sowohl prothetische "
+        "als auch chirurgische und implantologische. "
+        "Extrahiere Zähne und Behandlungen aus Arztnotizen. "
+        "Antworte AUSSCHLIESSLICH mit validem JSON-Array, kein Text davor/danach."
     )
 
-    behandlungs_typen = "\n".join(
-        f'  "{k}": {v["bezeichnung"]}'
-        for k, v in BEHANDLUNGEN_CONFIG.items()
+    # GOZ-Referenz kompakt formatieren (nur die häufigsten Kategorien)
+    goz_kurzref = []
+    for nr, (txt, kat) in GOZ_REFERENZ.items():
+        if kat in ("chirurgie", "implantologie"):
+            goz_kurzref.append(f"  {nr}: {txt}")
+    goz_ref_str = "\n".join(goz_kurzref)
+
+    # Alle Behandlungstypen aufzählen (prothetisch + chirurgisch)
+    alle_typen_str = "\n".join(
+        f'  "{k}": {v["bezeichnung"]} [GOZ {v.get("haupt_goz") or v.get("goz_basis","")}]'
+        for k, v in ALL_KATALOG_KEYS.items()
     )
 
     user_msg = f"""Parse diese Behandlungsnotiz{f" für {patient_name}" if patient_name else ""}:
 \"{text}\"
 
-Extrahiere jeden erwähnten Zahn. Für jeden Zahn:
-- zahn: FDI-Nummer als Integer (z.B. 31), oder null wenn unklar
-- behandlung_raw: wörtliche Behandlungsangabe aus dem Text
-- katalog_key: passender Behandlungstyp aus dieser Liste:
-{behandlungs_typen}
-  Wenn unklar → null
-- is_implant: true wenn "Implantat", "Impl.", "impl" erwähnt UND Prothetik gemeint ist
-  (NICHT bei rein chirurgischer Implantat-Setzung)
-- goz_basis: "2210" für Kronen, "2200i" für Implantatkrone, "2190" für Inlay (default),
-  "2180"/"2200" wenn Flächen bekannt, sonst null
-- karies_flaechen: Integer (1-5) wenn Flächenanzahl erwähnt, sonst null
-- confidence: "ok" wenn Zahn+Behandlung klar, "unclear" wenn etwas fehlt/mehrdeutig
-- hinweis: kurze Erklärung wenn confidence="unclear", sonst ""
+## Verfügbare Behandlungstypen (katalog_key → Bezeichnung [GOZ-Basis])
+### Prothetisch:
+{chr(10).join(f'  "{k}": {v["bezeichnung"]} [GOZ {v.get("haupt_goz","")}]' for k, v in BEHANDLUNGEN_CONFIG.items())}
 
-Beispiele:
-- "Zahn 31 Implantat Keramik" → zahn:31, katalog_key:"Keramikkrone_Implantat", is_implant:true
-- "11 Vollkeramik" → zahn:11, katalog_key:"Keramikkrone", is_implant:false
-- "35 Inlay 2-flächig" → zahn:35, katalog_key:"Inlay_Cerec", karies_flaechen:2, goz_basis:"2190"
-- "Keramikkrone" (ohne Zahnummer) → zahn:null, confidence:"unclear", hinweis:"Zahnummer fehlt"
-- "VMK 14" → zahn:14, katalog_key:"Verblendkrone"
-- "Zähne 11, 21 Keramik" → zwei Einträge: zahn:11 UND zahn:21
+### Chirurgisch / Implantologisch:
+{chr(10).join(f'  "{k}": {v["bezeichnung"]} [GOZ {v.get("goz_basis","")}]' for k, v in CHIRURGIE_CONFIG.items())}
+
+## GOZ-Referenz Chirurgie / Implantologie (zum Zuordnen)
+{goz_ref_str}
+
+## Regeln für jeden gefundenen Zahn:
+- zahn: FDI-Nummer als Integer, oder null wenn unklar
+- behandlung_raw: wörtliche Behandlungsangabe aus dem Text
+- katalog_key: passender Schlüssel aus obiger Liste, oder null wenn unklar
+- is_implant: true NUR wenn Krone/Prothetik AUF einem Implantat gemeint ist
+  (NICHT bei Implantat_Insertion, Extraktion etc. → die sind is_implant:false)
+- goz_basis: GOZ-Basisnummer der Hauptleistung (aus obiger Liste übernehmen)
+- karies_flaechen: Integer 1-5 wenn Flächenanzahl erwähnt, sonst null
+- confidence: "ok" wenn Zahn+Behandlung eindeutig, "unclear" wenn mehrdeutig/fehlt
+- hinweis: kurze Erklärung bei unclear, "" bei ok
+
+## Beispiele:
+- "Zahn 11 Extraktion (Längsfraktur)" → katalog_key:"Extraktion_einwurzelig", goz_basis:"3000", is_implant:false
+- "sofortige Implantation Straumann BLX regio 11" → katalog_key:"Implantat_Insertion", goz_basis:"9000", is_implant:false, zahn:11
+- "Zahn 31 Keramikkrone auf Implantat" → katalog_key:"Keramikkrone_Implantat", goz_basis:"2200i", is_implant:true
+- "11 Vollkeramikkrone" → katalog_key:"Keramikkrone", goz_basis:"2210", is_implant:false
+- "35 Inlay 2-flächig" → katalog_key:"Inlay_Cerec", karies_flaechen:2, goz_basis:"2190"
+- "VMK 14" → katalog_key:"Verblendkrone", goz_basis:"2210"
+- "Zähne 11, 21 Keramik" → ZWEI Einträge (zahn:11 und zahn:21)
+- "Extraktion 11, anschließend Sofortimplantat" → ZWEI Einträge: Extraktion_einwurzelig zahn:11 + Implantat_Insertion zahn:11
 
 Antworte NUR mit dem JSON-Array:
-[{{"zahn":31,"behandlung_raw":"...","katalog_key":"...","is_implant":false,
-   "goz_basis":"2210","karies_flaechen":null,"confidence":"ok","hinweis":""}}]"""
+[{{"zahn":11,"behandlung_raw":"Extraktion","katalog_key":"Extraktion_einwurzelig",
+   "is_implant":false,"goz_basis":"3000","karies_flaechen":null,"confidence":"ok","hinweis":""}}]"""
 
     try:
         response = client.messages.create(

@@ -99,6 +99,76 @@ BEHANDLUNGEN_CONFIG: dict[str, dict] = {
 }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Chirurgische Behandlungstypen (Extraktion, Implantation, etc.)
+# Kein Katalog-Aufbau aus DB – GOZ-Stückliste kommt direkt vom Agent.
+# ─────────────────────────────────────────────────────────────────────────────
+CHIRURGIE_CONFIG: dict[str, dict] = {
+    "Extraktion_einwurzelig": {
+        "bezeichnung": "Extraktion (einwurzelig, GOZ 3000)",
+        "goz_basis":   "3000",
+        "is_implant":  False,
+        "keywords":    ["extraktion", "ziehen", "extrahieren", "entfernung zahn",
+                        "exo", "wurzelfraktur", "nicht erhaltungswürdig"],
+    },
+    "Extraktion_mehrwurzelig": {
+        "bezeichnung": "Extraktion (mehrwurzelig, GOZ 3010)",
+        "goz_basis":   "3010",
+        "is_implant":  False,
+        "keywords":    ["extraktion mehrwurzelig", "molar extrahier",
+                        "mehrwurzel", "prämolar extrahier"],
+    },
+    "Extraktion_chirurgisch": {
+        "bezeichnung": "Operative Zahnentfernung (chirurgisch, GOZ 3040)",
+        "goz_basis":   "3040",
+        "is_implant":  False,
+        "keywords":    ["osteotomie", "operative entfernung", "retiniert",
+                        "verlagert", "weisheitszahn", "chirurgisch entfernen"],
+    },
+    "Implantat_Insertion": {
+        "bezeichnung": "Implantat-Insertion / Sofortimplantation (GOZ 9000)",
+        "goz_basis":   "9000",
+        "is_implant":  False,   # Chirurgie, NICHT Prothetik-Implantat
+        "keywords":    ["implantat setzen", "implantation", "insertion",
+                        "sofortimplantat", "enossales implantat",
+                        "straumann", "blx", "implantat regio"],
+    },
+    "Implantat_Augmentation": {
+        "bezeichnung": "Implantat-Insertion mit Augmentation (GOZ 9010 + 9020)",
+        "goz_basis":   "9010",
+        "is_implant":  False,
+        "keywords":    ["augmentation", "knochenersatz", "bone graft",
+                        "sinuslift", "sinus lift", "knochenaufbau",
+                        "gbr", "guided bone"],
+    },
+    "Implantat_Freilegung": {
+        "bezeichnung": "Implantat-Freilegung zweizeitig (GOZ 9030)",
+        "goz_basis":   "9030",
+        "is_implant":  False,
+        "keywords":    ["freilegung implantat", "zweizeitig", "einheilung abgeschlossen"],
+    },
+    "WSR": {
+        "bezeichnung": "Wurzelspitzenresektion (WSR, GOZ 3130)",
+        "goz_basis":   "3130",
+        "is_implant":  False,
+        "keywords":    ["wsr", "wurzelspitzenresektion", "apektomie", "resektion"],
+    },
+    "Lappenoperation": {
+        "bezeichnung": "Parodontalchirurgie / Lappenoperation (GOZ 3110/3120)",
+        "goz_basis":   "3110",
+        "is_implant":  False,
+        "keywords":    ["lappen", "paro chirurgie", "parodontal op",
+                        "aufklappung", "kürettage offen"],
+    },
+}
+
+# Alle bekannten katalog_key-Werte (prothetisch + chirurgisch)
+ALL_KATALOG_KEYS: dict[str, dict] = {
+    **{k: {**v, "kategorie": "prothetik"} for k, v in BEHANDLUNGEN_CONFIG.items()},
+    **{k: {**v, "kategorie": "chirurgie"} for k, v in CHIRURGIE_CONFIG.items()},
+}
+
+
 def find_katalog_key(treatment_name: str, is_implant: bool = False,
                      goz_basis: str = None) -> str | None:
     """Ermittelt den Katalogschlüssel für einen Behandlungseintrag aus gap_teeth."""

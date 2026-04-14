@@ -118,3 +118,123 @@ GOZ_OPTIONAL_BEI_KRONE = ["0090", "0070", "0100", "2290"]
 GOZ_PFLICHT_BEI_IMPLANTAT  = ["2200i", "9050", "2197"]      # Implantatkrone, Abutment, Adhäsiv
 GOZ_STANDARD_BEI_IMPLANTAT = ["5190a", "8000", "8010", "8020", "8060", "8080", "2030"]
 GOZ_OPTIONAL_BEI_IMPLANTAT = ["5120i", "2270i", "19"]       # Prov. Implantatkrone etc.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Vollständige GOZ-Referenztabelle
+# Format: "goz_nr": ("offizielle Leistungsbezeichnung", "kategorie")
+#
+# Verwendet von:
+#   • hkp_agents.py  → kontextabhängige Injektion in den Agent-Prompt
+#   • text_parser.py → Parser-Prompt anreichern
+#
+# Kategorien: allgemein | konservierend | inlay | krone | prothetik |
+#             mko | chirurgie | implantologie | analog
+# ─────────────────────────────────────────────────────────────────────────────
+GOZ_REFERENZ: dict[str, tuple[str, str]] = {
+    # ── Allgemeine Leistungen ────────────────────────────────────────────────
+    "0010": ("Beratung", "allgemein"),
+    "0030": ("Eingehende Untersuchung und Beratung", "allgemein"),
+    "0040": ("Befundaufnahme und Behandlungsplanung", "allgemein"),
+    "0050": ("Schriftlicher Heil- und Kostenplan", "allgemein"),
+    "0060": ("Eingehende Untersuchung der Kaumuskulatur/Gelenke (CMD)", "allgemein"),
+    "0070": ("Präventive Beratung", "allgemein"),
+    "0090": ("Kurze Information (telefonisch / mündlich)", "allgemein"),
+    "Ä1":   ("Eingehende Beratung (analog ärztl. GOÄ §3)", "allgemein"),
+
+    # ── Konservierend / Füllungen ────────────────────────────────────────────
+    "2030": ("Provisorische Füllung / Aufbau", "konservierend"),
+    "2040": ("Adhäsive Befestigung provisorisch", "konservierend"),
+    "2060": ("Kunststofffüllung 1-flächig", "konservierend"),
+    "2080": ("Kunststofffüllung 2-flächig", "konservierend"),
+    "2100": ("Kunststofffüllung 3-flächig", "konservierend"),
+    "2120": ("Aufbaufüllung (Stumpfaufbau) direkt", "konservierend"),
+    "2170": ("Einlagefüllung mehr als zweiflächig (praxisspez. Alias für Inlay 3-fl.)", "inlay"),
+    "2180": ("Inlay / Einlagefüllung 1-flächig (Keramik oder Gold)", "inlay"),
+    "2190": ("Inlay / Einlagefüllung 2-flächig", "inlay"),
+    "2197": ("Adhäsive Befestigung (Inlay, Krone, Veneer, Brückenglied)", "inlay"),
+    "2200": ("Inlay / Einlagefüllung 3-flächig und mehr", "inlay"),
+
+    # ── Krone / Brücke ───────────────────────────────────────────────────────
+    "2210": ("Krone (Vollgusskrone, Verblendkrone, Vollkeramikkrone)", "krone"),
+    "2270": ("Stiftaufbau indirekt (Guss-/Keramikstift)", "krone"),
+    "2290": ("Entfernung einer Krone / eines Inlays", "krone"),
+    "2310": ("Brückenglied (gegossenes Metall)", "krone"),
+    "2320": ("Brückenglied (vollkeramisch)", "krone"),
+
+    # ── Prothetik ────────────────────────────────────────────────────────────
+    "5000": ("Planung Gesamtprothetik / Erstuntersuchung", "prothetik"),
+    "5110": ("Vorübergehende Krone (Langzeit-Provisorium)", "prothetik"),
+    "5120": ("Vorübergehende Krone auf Implantat (Provisorium)", "prothetik"),
+    "5140": ("Adhäsiv-Kurzzeit-Provisorium", "prothetik"),
+    "5190": ("Abformung mit individuellem Löffel (je Kiefer)", "prothetik"),
+
+    # ── MKO-Paket (einmalig pro Sitzung) ────────────────────────────────────
+    "8000": ("MKO – Kofferdam / Spanngummi anlegen", "mko"),
+    "8010": ("MKO – Assistenz / Trockenlegung", "mko"),
+    "8020": ("MKO – Farbfotodokumentation", "mko"),
+    "8030": ("MKO – Okklusionsregistrierung", "mko"),
+    "8040": ("MKO – Materialvorbereitung / Bonding-Protokoll", "mko"),
+    "8050": ("MKO – Medikamentöse Einlage / Unterfüllung", "mko"),
+    "8060": ("MKO – Ergänzende Maßnahmen (Licht, Lagerung)", "mko"),
+    "8070": ("MKO – Anästhesieprotokoll / Vitalitätsprüfung", "mko"),
+    "8080": ("MKO – Materialaufwand / Sonderinstrumentarium", "mko"),
+
+    # ── Chirurgie – Extraktion / Osteotomie ──────────────────────────────────
+    "3000": ("Extraktion eines einwurzeligen Zahns", "chirurgie"),
+    "3010": ("Extraktion eines mehrwurzeligen Zahns", "chirurgie"),
+    "3030": ("Osteotomie einer Zahnwurzel (Freilegung/chirurg. Entfernung)", "chirurgie"),
+    "3040": ("Operative Entfernung eines verlagerten/retinierten Zahns", "chirurgie"),
+    "3050": ("Alveoloplastik / Glättung der Extraktionswunde (einzeitig)", "chirurgie"),
+    "3060": ("Alveoloplastik mehrzeitig / Knochennivellierung", "chirurgie"),
+    "3070": ("Gingivektomie / Gingivoplastik je Zahn", "chirurgie"),
+    "3100": ("Inzision / Drainage eines Abszesses", "chirurgie"),
+    "3110": ("Aufklappung / Lappenplastik einflächig", "chirurgie"),
+    "3120": ("Aufklappung / Lappenplastik mehrflächig", "chirurgie"),
+    "3130": ("Wurzelspitzenresektion (WSR)", "chirurgie"),
+    "3190": ("Chirurgische Entfernung eines retinierten / verlagerten Zahns", "chirurgie"),
+    "3210": ("Wundversorgung / Naht", "chirurgie"),
+    "3270": ("Entfernung Nahtmaterial", "chirurgie"),
+
+    # ── Implantologie ────────────────────────────────────────────────────────
+    "9000": ("Insertion eines enossalen Implantats (Sofort- oder Spätimplantation)", "implantologie"),
+    "9010": ("Insertion eines Implantats in augmentiertes Knochenlager", "implantologie"),
+    "9020": ("Einbringen von Knochenersatzmaterial (Augmentation)", "implantologie"),
+    "9030": ("Freilegung eines zweizeitig inserierten Implantats", "implantologie"),
+    "9040": ("Beseitigung von Komplikationen an Implantaten", "implantologie"),
+    "9050": ("Entfernen und Wiedereinsetzen des Sekundärteils (Abutment)", "implantologie"),
+    "9060": ("Periimplantäre Therapie (Reinigung / Desinfektion)", "implantologie"),
+    "9070": ("Präprothetische chirurgische Maßnahme in der Implantologie", "implantologie"),
+    "9080": ("Entnahme / Transplantation autologen Knochens", "implantologie"),
+
+    # ── §6-Analog (praxisinterne Sonderbezeichnungen in Charly) ─────────────
+    "2200i": ("§6-Analog: Implantatkrone (Keramik/Zirkon, analog GOZ 2210)", "analog"),
+    "5120i": ("§6-Analog: Provisorische Ankerkrone auf Implantat", "analog"),
+    "2270i": ("§6-Analog: Individualisiertes Abutment (analog GOZ 2270)", "analog"),
+    "5190a": ("§6-Analog: Abformung individ. Löffel (analog GOZ 5190)", "analog"),
+    "2120z": ("§6-Analog: Stumpfaufbau Zirkon / Keramik (analog GOZ 2120)", "analog"),
+}
+
+# Schnellzugriff: GOZ-Kategorien für kontextabhängige Prompt-Injektion
+def goz_ref_section(kategorien: list[str]) -> str:
+    """Gibt einen formatierten GOZ-Referenz-Block für den angegebenen Kategorien zurück."""
+    lines = ["## GOZ-Referenz (relevante Positionen)\n"]
+    for kat in kategorien:
+        abschnitt = [(nr, txt) for nr, (txt, k) in GOZ_REFERENZ.items() if k == kat]
+        if not abschnitt:
+            continue
+        kat_label = {
+            "allgemein": "Allgemeine Leistungen",
+            "konservierend": "Konservierend / Füllungen",
+            "inlay": "Inlay / Einlagefüllung",
+            "krone": "Krone / Brücke",
+            "prothetik": "Prothetik",
+            "mko": "MKO-Paket (einmalig/Sitzung)",
+            "chirurgie": "Chirurgie / Extraktion",
+            "implantologie": "Implantologie",
+            "analog": "§6-Analog",
+        }.get(kat, kat)
+        lines.append(f"### {kat_label}")
+        for nr, txt in abschnitt:
+            lines.append(f"  {nr:8s} {txt}")
+        lines.append("")
+    return "\n".join(lines)
