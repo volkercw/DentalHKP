@@ -192,6 +192,108 @@ with st.sidebar:
                 kv_options[label] = kv["solid"]
             st.session_state["recent_kvs_list"] = kv_options
 
+    # ── Positions-Analyse ───────────────────────────────────────────────────
+    st.divider()
+    from position_analyzer import (
+        analyse_info as _pa_info,
+        build_position_analysis as _pa_build,
+        save_position_analysis as _pa_save,
+    )
+    _pai = _pa_info()
+    if _pai["vorhanden"]:
+        _pa_datum = _pai["erstellt_am"][:10]
+        st.success(
+            f"📐 Positions-Analyse · {_pai['kvs']} KVs · "
+            f"MKO {_pai['mko_pct']*100:.0f}% · "
+            f"{_pai['n_positionen']} Positionen · {_pai['n_paare']} Paare · {_pa_datum}"
+        )
+    else:
+        st.warning("📐 Keine Positions-Analyse vorhanden")
+
+    with st.expander("📐 MKO & Reihenfolge-Analyse", expanded=False):
+        st.caption(
+            "Analysiert historische KV-Daten: MKO-Häufigkeit, "
+            "typische Reihenfolge und Sequenz-Paare."
+        )
+        _pa_limit = st.slider(
+            "Anzahl KVs analysieren", 200, 2000, 800, 100,
+            key="pa_limit_slider",
+        )
+        _pa_sw = st.slider(
+            "MKO-Schwellwert (Co-Occurrence)", 0.40, 0.80, 0.55, 0.05,
+            key="pa_schwellwert_slider",
+            help="Anteil der KVs in denen eine Position zusammen mit MKO erscheinen muss",
+        )
+        if st.button("🔄 Analyse jetzt starten", type="primary", key="btn_pa_build"):
+            _pa_log = st.empty()
+            _pa_msgs = []
+
+            def _pa_cb(msg: str):
+                _pa_msgs.append(msg)
+                _pa_log.info(msg)
+
+            with st.spinner("Analysiere DB..."):
+                try:
+                    _pa_result = _pa_build(
+                        limit_kvs=_pa_limit,
+                        mko_schwellwert=_pa_sw,
+                        status_callback=_pa_cb,
+                    )
+                    _pa_save(_pa_result)
+                    _pa_log.success("✅ Analyse gespeichert")
+                    st.rerun()
+                except Exception as _e:
+                    _pa_log.error(f"❌ Fehler: {_e}")
+                    st.exception(_e)
+
+        # Ergebnis-Vorschau
+        if _pai["vorhanden"]:
+            if st.button("👁 Ergebnis anzeigen", key="btn_pa_preview"):
+                from position_analyzer import load_position_analysis as _pa_load
+                st.session_state["_pa_preview"] = _pa_load()
+            if st.button("🗑 Vorschau schließen", key="btn_pa_clear"):
+                st.session_state.pop("_pa_preview", None)
+
+        _pa_prev = st.session_state.get("_pa_preview")
+        if _pa_prev:
+            _mko = _pa_prev.get("mko", {})
+            _cluster = _pa_prev.get("mko_cluster", {})
+
+            st.markdown(f"**MKO gesamt:** {_mko.get('mko_pct',0)*100:.1f}% "
+                        f"({_mko.get('mko_kvs',0)} / {_mko.get('analysiert_kvs',0)} KVs)")
+            st.markdown(f"**Schwellwert:** {_cluster.get('schwellwert',0)*100:.0f}%")
+
+            st.markdown("**MKO-Trigger-Positionen** (wenn vorhanden → MKO einschließen):")
+            st.code(", ".join(_cluster.get("mko_trigger_nrs", [])))
+
+            st.markdown("**Co-Occurrence Top 15 (in MKO-KVs):**")
+            _co_data = [
+                {
+                    "GOZ": r["goz_nr"],
+                    "Text": r["text"][:40],
+                    "KVs": r["kvs"],
+                    "MKO-KVs %": f"{r['pct']*100:.0f}%",
+                    "Rang-Diff": f"{r['rank_diff_to_mko']:+.1f}",
+                }
+                for r in _mko.get("co_occurrence", [])[:15]
+            ]
+            if _co_data:
+                st.dataframe(_co_data, use_container_width=True, hide_index=True)
+
+            _pairs = _pa_prev.get("ordering", {}).get("sequence_pairs", [])[:15]
+            if _pairs:
+                st.markdown("**Typische Reihenfolge-Paare** (≥70% konsistent):")
+                _pairs_data = [
+                    {
+                        "Zuerst": p["before"],
+                        "Dann":   p["after"],
+                        "KVs":    p["kvs"],
+                        "Konstistenz": f"{p['pct']*100:.0f}%",
+                    }
+                    for p in _pairs
+                ]
+                st.dataframe(_pairs_data, use_container_width=True, hide_index=True)
+
     # ── Stücklisten-Katalog ─────────────────────────────────────────────────
     st.divider()
     from katalog_builder import katalog_info, build_katalog, save_katalog, BEHANDLUNGEN_CONFIG

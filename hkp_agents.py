@@ -403,9 +403,21 @@ NICHT verwenden: 9050 als Abutment hier – das gehört zur prothetischen Sitzun
         except Exception:
             pass   # Katalog nicht verfügbar → silent fallback
 
+    # ── MKO-Entscheidung via Positions-Analyse ────────────────────────────
+    _default_proposed = [_default_goz_nr]   # Hauptleistung für MKO-Check
+    _mko_include = True
+    _mko_reason  = "Standard (keine Analyse vorhanden)"
+    try:
+        from position_analyzer import should_include_mko, load_position_analysis
+        _pa = load_position_analysis()
+        _mko_include, _mko_reason = should_include_mko(_default_proposed, _pa)
+    except Exception:
+        pass   # Fallback: MKO immer einschließen
+
     # Hinweis auf bereits vorgeschlagene Session-GOZ
     _session_already = sorted(already_session_goz & GOZ_SESSION_EINMALIG)
-    _mko_remaining   = [n for n in ["8000","8010","8020","8060","8080"] if n not in already_session_goz]
+    _mko_remaining   = [n for n in ["8000","8010","8020","8060","8080"]
+                        if n not in already_session_goz] if _mko_include else []
     _session_hint = ""
     if _session_already:
         _session_hint = (
@@ -416,6 +428,13 @@ NICHT verwenden: 9050 als Abutment hier – das gehört zur prothetischen Sitzun
         )
         if not _mko_remaining:
             _session_hint += "→ MKO-Paket KOMPLETT bereits vorgeschlagen – weglassen!\n"
+
+    _mko_instr = (
+        f"MKO-Paket (8000, 8010, 8020, 8060, 8080) – "
+        + (f"WEGLASSEN (Analyse: {_mko_reason})" if not _mko_include
+           else (f"bereits vorgeschlagen – WEGLASSEN" if not _mko_remaining
+                 else f"noch benötigt: {', '.join(_mko_remaining)} | Grund: {_mko_reason}"))
+    )
 
     user_msg = f"""## Patientenkontext
 Patient: {patient_info.get('name', '')} {patient_info.get('vorname', '')}
@@ -431,14 +450,14 @@ KV-Bezeichnung: {patient_info.get('kurztext', '')}
 {aufgabe}
 
 Berücksichtige:
-1. MKO-Paket (8000, 8010, 8020, 8060, 8080) = nur EINMAL pro Sitzung, {f"bereits vorgeschlagen – WEGLASSEN" if not _mko_remaining else f"noch benötigt: {', '.join(_mko_remaining)}"}
+1. {_mko_instr}
 2. Hauptleistung: {"2200i (Implantatkrone §6-Analog)" if is_implant else (f"{_goz_basis_tooth} (Inlay)" if _is_inlay else "z.B. 2210 Keramikkrone")}
-3. Praxisstandards: 2030, 5190a, 2270, 2120z, Ä1, Ä5, 5110a, 2197
+3. Praxisstandards: 2030, 5190a, 2270, 2120z, Ä1, 5110a, 2197
 4. §6-Analog-Positionen aus dem Archiv
 5. Faktor: Praxisüblich 3,5; Regelfall 2,3
 
 Farbregeln "farbe":
-- "gruen" = PFLICHT (Hauptleistung, MKO wenn noch nicht vorgeschlagen, 2197 bei Vollkeramik{", 9050+2200i bei Implantat" if is_implant else ""})
+- "gruen" = PFLICHT (Hauptleistung, MKO wenn noch nicht vorgeschlagen und relevant, 2197 bei Vollkeramik{", 9050+2200i bei Implantat" if is_implant else ""})
 - "gelb" = EMPFOHLEN (Praxisstandard)
 - null = OPTIONAL
 
@@ -538,6 +557,16 @@ def run_goz_agent(
             nr = pos.get("goz_nr", "")
             if nr in GOZ_SESSION_EINMALIG:
                 session_goz_proposed.add(nr)
+
+        # Positionen nach typischer Reihenfolge sortieren (wenn Analyse vorhanden)
+        try:
+            from position_analyzer import sort_positions_by_rank, load_position_analysis
+            _pa = load_position_analysis()
+            if _pa and result.get("positionen"):
+                result["positionen"] = sort_positions_by_rank(result["positionen"], _pa)
+        except Exception:
+            pass
+
         zaehne_results.append(result)
 
     any_parse_error = any(z.get("_parse_error") for z in zaehne_results)
