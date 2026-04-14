@@ -333,24 +333,27 @@ def _goz_agent_single_tooth(
     elif _is_impl_insert:
         _is_aug = "Augmentation" in _katalog_key
         implant_hinweis = f"""
-## IMPLANTAT-INSERTION – GOZ-Positionen
-- {tooth.get('goz_basis','9000')} = Implantat-Insertion HAUPTLEISTUNG → farbe: gruen
-  (9000=Standardlager, 9010=augmentiertes Lager)
-{'- 9020 = Knochenersatzmaterial/Augmentation → farbe: gruen' if _is_aug else '- 9020 = Augmentation (falls erforderlich) → farbe: gelb'}
-- 3210 = Wundnaht → farbe: gelb
-- 3270 = Nahtentfernung → farbe: gelb
-- 0040 = Befundaufnahme → farbe: gelb
+## IMPLANTAT-INSERTION – GOZ 2012 Positionen (Abschnitt K)
+- 9000  = Implantatinsertion enossales Implantat (HAUPTLEISTUNG, Sofort- oder Spätimplantation) → farbe: gruen
+- 9010  = Freilegung des Implantats (zweizeitiges Vorgehen, Sitzung 2) → farbe: gelb (wenn zweizeitig)
+{'- 9030  = Knochenaugmentation / GBR (gesteuerte Knochenregeneration) → farbe: gruen' if _is_aug else '- 9030  = Knochenaugmentation / GBR (falls erforderlich) → farbe: gelb'}
+{'- 9040  = Sinusbodenaugmentation intern (krestal, bei OK-Seitenzähnen) → farbe: gelb' if _is_aug else ''}
+- 3210  = Wundnaht → farbe: gelb
+- 3270  = Nahtentfernung → farbe: gelb
+- 0040  = Befundaufnahme / Behandlungsplanung → farbe: gelb
 - 8000-8080 = MKO-Paket → farbe: gruen
-- 9030 = Freilegung (nur bei zweizeitig) → farbe: gelb
-NICHT verwenden: 9050 (das ist beim Abutment-Einsetzen bei der Prothetik)"""
+GOZ 9050 (Sinuslift extern / Caldwell-Luc) nur bei lateralem Sinuslift.
+NICHT verwenden: 9050 als Abutment hier – das gehört zur prothetischen Sitzung."""
     elif is_implant:
         implant_hinweis = """
 ## IMPLANTAT-KRONE – besondere GOZ-Positionen
-- 2200i = §6 Analog Implantatkrone (HAUPTLEISTUNG statt 2210) → farbe: gruen
-- 9050  = Entfernen und Wiedereinsetzen des Sekundärteils (Abutment) → farbe: gruen
-- 2197  = Adhäsive Befestigung → farbe: gruen
+- 2200i = §6-Analog Implantatkrone Vollkeramik (HAUPTLEISTUNG statt 2210) → farbe: gruen
+- 9050  = Abutment entfernen + wiedereinsetzen (Praxisalias §6-Analog, in Charly als 9050) → farbe: gruen
+          [HINWEIS: GOZ 9050 offiz. = Sinuslift extern – diese Praxis nutzt 9050 für Abutment]
+- 2197  = Adhäsive Befestigung (PFLICHT bei Vollkeramik) → farbe: gruen
 - 5120i = Provisorische Ankerkrone auf Implantat → farbe: gelb
 - 5190a = Abformung individ. Löffel → farbe: gelb
+- 2270i = Individualisiertes Abutment / Aufbauteil → farbe: gelb
 - MKO-Paket 8000-8080 → farbe: gruen"""
     elif _is_inlay:
         implant_hinweis = f"""

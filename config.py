@@ -115,7 +115,9 @@ GOZ_STANDARD_BEI_KRONE = ["5190a", "0040", "4050", "2270", "2120z", "Ä1", "5110
 GOZ_OPTIONAL_BEI_KRONE = ["0090", "0070", "0100", "2290"]
 
 # Zusätzliche Positionen bei Implantat-Krone
-GOZ_PFLICHT_BEI_IMPLANTAT  = ["2200i", "9050", "2197"]      # Implantatkrone, Abutment, Adhäsiv
+GOZ_PFLICHT_BEI_IMPLANTAT  = ["2200i", "9050", "2197"]
+# ↑ "9050" = Charly-Praxisalias für "Abutment entfernen/einsetzen" (§6-Analog)
+#   ACHTUNG: GOZ 2012 §9050 = Sinuslift extern – abweichende Verwendung in Charly!
 GOZ_STANDARD_BEI_IMPLANTAT = ["5190a", "8000", "8010", "8020", "8060", "8080", "2030"]
 GOZ_OPTIONAL_BEI_IMPLANTAT = ["5120i", "2270i", "19"]       # Prov. Implantatkrone etc.
 
@@ -195,23 +197,65 @@ GOZ_REFERENZ: dict[str, tuple[str, str]] = {
     "3210": ("Wundversorgung / Naht", "chirurgie"),
     "3270": ("Entfernung Nahtmaterial", "chirurgie"),
 
-    # ── Implantologie ────────────────────────────────────────────────────────
-    "9000": ("Insertion eines enossalen Implantats (Sofort- oder Spätimplantation)", "implantologie"),
-    "9010": ("Insertion eines Implantats in augmentiertes Knochenlager", "implantologie"),
-    "9020": ("Einbringen von Knochenersatzmaterial (Augmentation)", "implantologie"),
-    "9030": ("Freilegung eines zweizeitig inserierten Implantats", "implantologie"),
-    "9040": ("Beseitigung von Komplikationen an Implantaten", "implantologie"),
-    "9050": ("Entfernen und Wiedereinsetzen des Sekundärteils (Abutment)", "implantologie"),
-    "9060": ("Periimplantäre Therapie (Reinigung / Desinfektion)", "implantologie"),
-    "9070": ("Präprothetische chirurgische Maßnahme in der Implantologie", "implantologie"),
-    "9080": ("Entnahme / Transplantation autologen Knochens", "implantologie"),
+    # ── Abschnitt B – Prophylaxe (1000er) ───────────────────────────────────
+    "1000": ("Mundgesundheitsaufklärung / Prophylaxegespräch", "prophylaxe"),
+    "1020": ("Professionelle Zahnreinigung (PZR) je Sitzung", "prophylaxe"),
+    "1040": ("Fluoridierungsmaßnahme", "prophylaxe"),
+
+    # ── Abschnitt E – Parodontalbehandlung (4000er) ─────────────────────────
+    "4000": ("Erhebung Parodontalstatus (PSI/Befund)", "parodontal"),
+    "4005": ("Mundhygieneinstruktion + Remotivation", "parodontal"),
+    "4010": ("Geschlossene Parodontalbehandlung (SRP) je Zahn / Sextant", "parodontal"),
+    "4020": ("Medikamentöse Lokaltherapie je Zahn", "parodontal"),
+    "4050": ("Parodontalchirurgie einflächig", "parodontal"),
+    "4060": ("Parodontalchirurgie mehrflächig", "parodontal"),
+    "4070": ("Schleim-/Bindegewebstransplantat (Rezessionsdeckung)", "parodontal"),
+    "4090": ("Subgingivale Kürettage (Einzelzahn)", "parodontal"),
+
+    # ── Abschnitt H – Aufbissbehelfe / Schienen (7000er) ────────────────────
+    "7010": ("Diagnostische Aufbissschiene (einfach)", "schiene"),
+    "7020": ("Therapeutische Aufbissschiene (Michigan-Schiene)", "schiene"),
+    "7030": ("Stabilisierungsschiene / Knirscherschiene", "schiene"),
+
+    # ── Abschnitt K – Implantologie (GOZ 2012, §§ 9000 ff.) ─────────────────
+    #
+    # KORRIGIERTE Nummern gemäß GOZ 2012:
+    # 9000  Implantatinsertion (enossales Implantat)
+    # 9010  Freilegung des Implantats (zweizeitiges Vorgehen)
+    # 9020  Entfernung eines enossalen Implantats
+    # 9030  Knochenaugmentation (GBR – gesteuerte Knochenregeneration)
+    # 9040  Sinusbodenaugmentation von intraoralem Zugang (interner Sinuslift, krestal)
+    # 9050  Sinusbodenaugmentation von extraoralem Zugang (externer Sinuslift, lateral)
+    # 9060  Periimplantäre Therapie
+    # 9070  Präprothetischer Eingriff (z.B. Vestibulumplastik)
+    # 9080  Knochenentnahme und -transplantation aus extraoralem Gebiet
+    #
+    # ACHTUNG: "9050" wird in Charly/Solutio ZUSÄTZLICH als §6-Analog-Code
+    # für "Abutment entfernen/einsetzen" verwendet (Praxisalias, nicht GOZ 2012).
+    # Im Agent-Prompt wird dies als "9050a" (Analog) kenntlich gemacht.
+    # ─────────────────────────────────────────────────────────────────────────
+    "9000": ("Implantatinsertion – Insertion eines enossalen Implantats", "implantologie"),
+    "9010": ("Freilegung des Implantats (zweizeitiges Vorgehen)", "implantologie"),
+    "9020": ("Entfernung eines enossalen Implantats", "implantologie"),
+    "9030": ("Knochenaugmentation – gesteuerte Knochenregeneration (GBR)", "implantologie"),
+    "9040": ("Sinusbodenaugmentation interner Zugang (krestal / intralveolär)", "implantologie"),
+    "9050": ("Sinusbodenaugmentation externer Zugang (lateral / Caldwell-Luc)", "implantologie"),
+    "9060": ("Periimplantäre Therapie (Reinigung, Desinfektion, Defektbehandlung)", "implantologie"),
+    "9070": ("Präprothetischer chirurgischer Eingriff (z.B. Vestibulumplastik)", "implantologie"),
+    "9080": ("Knochenentnahme und -transplantation aus extraoralem Gebiet", "implantologie"),
 
     # ── §6-Analog (praxisinterne Sonderbezeichnungen in Charly) ─────────────
-    "2200i": ("§6-Analog: Implantatkrone (Keramik/Zirkon, analog GOZ 2210)", "analog"),
-    "5120i": ("§6-Analog: Provisorische Ankerkrone auf Implantat", "analog"),
-    "2270i": ("§6-Analog: Individualisiertes Abutment (analog GOZ 2270)", "analog"),
-    "5190a": ("§6-Analog: Abformung individ. Löffel (analog GOZ 5190)", "analog"),
-    "2120z": ("§6-Analog: Stumpfaufbau Zirkon / Keramik (analog GOZ 2120)", "analog"),
+    # WICHTIG: "9050a" = Charly-Alias für Abutment-Management (§6-Analog).
+    # Das ist NICHT identisch mit GOZ 9050 (Sinuslift extern).
+    "2200i": ("§6-Analog: Implantatkrone Vollkeramik/Zirkon (analog GOZ 2210)", "analog"),
+    "5120i": ("§6-Analog: Provisorische Ankerkrone auf Implantat (Langzeitprovisorium)", "analog"),
+    "2270i": ("§6-Analog: Individualisiertes Abutment / Aufbauteil (analog GOZ 2270)", "analog"),
+    # Charly speichert Abutment unter "9050" – GLEICHER CODE wie GOZ 9050 Sinuslift!
+    # In dieser Praxis bedeutet "9050" = §6-Analog Abutment (nicht Sinuslift).
+    # Deshalb erscheint 9050 sowohl in "implantologie" als auch hier als Erklärung:
+    "9050_abutment": ("PRAXISALIAS: Abutment entfernen/einsetzen (Charly §6-Analog, belegt GOZ-Nr. 9050)", "analog"),
+    "5190a": ("§6-Analog: Abformung mit individuellem Löffel (analog GOZ 5190)", "analog"),
+    "2120z": ("§6-Analog: Stumpfaufbau Zirkon / Keramik direkt (analog GOZ 2120)", "analog"),
 }
 
 # Schnellzugriff: GOZ-Kategorien für kontextabhängige Prompt-Injektion
@@ -223,15 +267,18 @@ def goz_ref_section(kategorien: list[str]) -> str:
         if not abschnitt:
             continue
         kat_label = {
-            "allgemein": "Allgemeine Leistungen",
-            "konservierend": "Konservierend / Füllungen",
-            "inlay": "Inlay / Einlagefüllung",
-            "krone": "Krone / Brücke",
-            "prothetik": "Prothetik",
-            "mko": "MKO-Paket (einmalig/Sitzung)",
-            "chirurgie": "Chirurgie / Extraktion",
-            "implantologie": "Implantologie",
-            "analog": "§6-Analog",
+            "allgemein":    "Abschnitt A – Allgemeine Leistungen (0010–0099)",
+            "prophylaxe":   "Abschnitt B – Prophylaxe (1000–1099)",
+            "konservierend":"Abschnitt C – Konservierend / Füllungen (2000–2999)",
+            "inlay":        "Abschnitt C – Inlay / Einlagefüllung (2180–2200)",
+            "krone":        "Abschnitt C – Krone / Brücke (2210–2320)",
+            "prothetik":    "Abschnitt F – Prothetik (5000–5999)",
+            "parodontal":   "Abschnitt E – Parodontalbehandlung (4000–4099)",
+            "schiene":      "Abschnitt H – Aufbissbehelfe / Schienen (7000–7099)",
+            "mko":          "Abschnitt J – MKO-Paket praxisspezifisch (8000–8080, einmalig/Sitzung)",
+            "chirurgie":    "Abschnitt D – Chirurgie / Extraktion (3000–3299)",
+            "implantologie":"Abschnitt K – Implantologie GOZ 2012 (9000–9080)",
+            "analog":       "§6-Analog – Praxisinterne Charly-Codes (nicht GOZ-Standard)",
         }.get(kat, kat)
         lines.append(f"### {kat_label}")
         for nr, txt in abschnitt:
